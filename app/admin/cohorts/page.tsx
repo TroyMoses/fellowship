@@ -1,16 +1,22 @@
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { getDatabase } from "@/lib/mongodb"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
-import { Plus, Users, Calendar } from "lucide-react"
-import { ObjectId } from "mongodb"
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getDatabase } from "@/lib/mongodb";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Plus, Users, Calendar } from "lucide-react";
+import { ObjectId } from "mongodb";
 
 export default async function CohortsPage() {
-  const session = await getServerSession(authOptions)
-  const db = await getDatabase()
+  const session = await getServerSession(authOptions);
+  const db = await getDatabase();
 
   const cohorts = await db
     .collection("cohorts")
@@ -18,14 +24,16 @@ export default async function CohortsPage() {
       institutionId: new ObjectId(session?.user?.institutionId),
     })
     .sort({ createdAt: -1 })
-    .toArray()
+    .toArray();
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Cohorts</h2>
-          <p className="text-muted-foreground">Manage your fellowship cohorts and participants</p>
+          <p className="text-muted-foreground">
+            Manage your fellowship cohorts and participants
+          </p>
         </div>
         <Link href="/admin/cohorts/new">
           <Button className="cursor-pointer">
@@ -54,20 +62,29 @@ export default async function CohortsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {cohorts.map((cohort) => (
-            <Link key={cohort._id.toString()} href={`/admin/cohorts/${cohort._id.toString()}`}>
+            <Link
+              key={cohort._id.toString()}
+              href={`/admin/cohorts/${cohort._id.toString()}`}
+            >
               <Card className="cursor-pointer hover:border-primary/50 transition-colors">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <CardTitle className="text-lg">{cohort.name}</CardTitle>
                     <Badge
                       variant={
-                        cohort.status === "active" ? "default" : cohort.status === "upcoming" ? "secondary" : "outline"
+                        cohort.status === "active"
+                          ? "default"
+                          : cohort.status === "upcoming"
+                          ? "secondary"
+                          : "outline"
                       }
                     >
                       {cohort.status}
                     </Badge>
                   </div>
-                  <CardDescription className="line-clamp-2">{cohort.description || "No description"}</CardDescription>
+                  <CardDescription className="line-clamp-2">
+                    {cohort.description || "No description"}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -77,7 +94,9 @@ export default async function CohortsPage() {
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
-                      <span>{new Date(cohort.startDate).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(cohort.startDate).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
                 </CardContent>
@@ -87,5 +106,5 @@ export default async function CohortsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

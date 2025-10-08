@@ -1,74 +1,87 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { toast } from "sonner"
-import { ArrowLeft, Upload } from "lucide-react"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { ArrowLeft, Upload } from "lucide-react";
+import Link from "next/link";
 
 export default function UploadContentPage() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [cohorts, setCohorts] = useState<any[]>([])
-  const [file, setFile] = useState<File | null>(null)
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [cohorts, setCohorts] = useState<any[]>([]);
+  const [file, setFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     cohortId: "",
     title: "",
     description: "",
     type: "document" as "document" | "video" | "presentation" | "other",
-  })
+  });
 
   useEffect(() => {
-    fetchCohorts()
-  }, [])
+    fetchCohorts();
+  }, []);
 
   const fetchCohorts = async () => {
     try {
-      const response = await fetch("/api/cohorts")
-      const data = await response.json()
-      setCohorts(data.cohorts || [])
+      const response = await fetch("/api/cohorts");
+      const data = await response.json();
+      setCohorts(data.cohorts || []);
     } catch (error) {
-      console.error("[v0] Failed to fetch cohorts:", error)
+      console.error("[v0] Failed to fetch cohorts:", error);
     }
-  }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0]
-      setFile(selectedFile)
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
 
       // Auto-fill title if empty
       if (!formData.title) {
-        setFormData({ ...formData, title: selectedFile.name })
+        setFormData({ ...formData, title: selectedFile.name });
       }
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!file) {
-      toast.error("Please select a file to upload")
-      return
+      toast.error("Please select a file to upload");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
       // Convert file to base64
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
 
       reader.onload = async () => {
-        const base64 = reader.result as string
+        const base64 = reader.result as string;
 
         const response = await fetch("/api/content", {
           method: "POST",
@@ -82,25 +95,26 @@ export default function UploadContentPage() {
             mimeType: file.type,
             fileData: base64,
           }),
-        })
+        });
 
         if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || "Failed to upload content")
+          const error = await response.json();
+          throw new Error(error.error || "Failed to upload content");
         }
 
-        toast.success("Content uploaded successfully to Google Drive!")
-        router.push("/admin/content")
-      }
+        toast.success("Content uploaded successfully to Google Drive!");
+        router.push("/admin/content");
+      };
 
       reader.onerror = () => {
-        throw new Error("Failed to read file")
-      }
+        throw new Error("Failed to read file");
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      toast.error(error.message)
-      setLoading(false)
+      toast.error(error.message);
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -112,13 +126,17 @@ export default function UploadContentPage() {
           </Button>
         </Link>
         <h2 className="text-3xl font-bold tracking-tight">Upload Content</h2>
-        <p className="text-muted-foreground">Upload files to Google Drive and share with fellows</p>
+        <p className="text-muted-foreground">
+          Upload files to Google Drive and share with fellows
+        </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Content Details</CardTitle>
-          <CardDescription>Upload a file and add information about it</CardDescription>
+          <CardDescription>
+            Upload a file and add information about it
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -126,7 +144,9 @@ export default function UploadContentPage() {
               <Label htmlFor="cohortId">Cohort *</Label>
               <Select
                 value={formData.cohortId}
-                onValueChange={(value) => setFormData({ ...formData, cohortId: value })}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, cohortId: value })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a cohort" />
@@ -144,11 +164,18 @@ export default function UploadContentPage() {
             <div className="space-y-2">
               <Label htmlFor="file">File *</Label>
               <div className="flex items-center gap-4">
-                <Input id="file" type="file" onChange={handleFileChange} required className="cursor-pointer" />
+                <Input
+                  id="file"
+                  type="file"
+                  onChange={handleFileChange}
+                  required
+                  className="cursor-pointer"
+                />
               </div>
               {file && (
                 <p className="text-sm text-muted-foreground">
-                  Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                  Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)}{" "}
+                  MB)
                 </p>
               )}
             </div>
@@ -159,7 +186,9 @@ export default function UploadContentPage() {
                 id="title"
                 placeholder="e.g., Week 1 Presentation"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
                 required
               />
             </div>
@@ -170,14 +199,22 @@ export default function UploadContentPage() {
                 id="description"
                 placeholder="Brief description of this content..."
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 rows={4}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="type">Content Type *</Label>
-              <Select value={formData.type} onValueChange={(value: any) => setFormData({ ...formData, type: value })}>
+              <Select
+                value={formData.type}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                onValueChange={(value: any) =>
+                  setFormData({ ...formData, type: value })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -192,13 +229,17 @@ export default function UploadContentPage() {
 
             <div className="rounded-lg bg-primary/10 p-4 text-sm">
               <p className="text-primary">
-                This file will be uploaded to the cohort's Google Drive folder and all fellows will have access to view
-                it.
+                This file will be uploaded to the cohort&apos;s Google Drive
+                folder and all fellows will have access to view it.
               </p>
             </div>
 
             <div className="flex gap-4">
-              <Button type="submit" disabled={loading || cohorts.length === 0} className="cursor-pointer">
+              <Button
+                type="submit"
+                disabled={loading || cohorts.length === 0}
+                className="cursor-pointer"
+              >
                 {loading ? (
                   <>Uploading...</>
                 ) : (
@@ -209,7 +250,11 @@ export default function UploadContentPage() {
                 )}
               </Button>
               <Link href="/admin/content">
-                <Button type="button" variant="outline" className="cursor-pointer bg-transparent">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="cursor-pointer bg-transparent"
+                >
                   Cancel
                 </Button>
               </Link>
@@ -224,5 +269,5 @@ export default function UploadContentPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

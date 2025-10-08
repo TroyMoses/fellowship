@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
         endTime: new Date(body.endTime),
         attendeeEmails: fellowEmails,
       })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("[v0] Calendar event creation failed:", error)
       return apiError("Failed to create Google Calendar event. Please ensure Google account is connected.", 500)
@@ -82,12 +83,14 @@ export async function POST(req: NextRequest) {
       },
       201,
     )
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("[v0] Create session error:", error)
     return apiError(error.message || "Failed to create session", 500)
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(req: NextRequest) {
   try {
     const session = await getAuthSession()
@@ -105,6 +108,7 @@ export async function GET(req: NextRequest) {
       .toArray()
 
     return apiSuccess({ sessions })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("[v0] Get sessions error:", error)
     return apiError(error.message || "Failed to fetch sessions", 500)

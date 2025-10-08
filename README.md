@@ -82,11 +82,17 @@ Copy the output and use it as your `NEXTAUTH_SECRET`.
 
 ### Google Cloud Setup
 
+**Important:** You must enable the required Google APIs before using the platform. Follow the detailed setup guide:
+
+**[📖 Complete Google API Setup Guide](./GOOGLE_API_SETUP.md)**
+
+Quick summary:
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing one
-3. Enable the following APIs:
-   - Google Calendar API
-   - Google Drive API
+3. **Enable the following APIs** (required):
+   - **Google Calendar API** - [Enable here](https://console.developers.google.com/apis/api/calendar-json.googleapis.com/overview)
+   - **Google Drive API** - [Enable here](https://console.developers.google.com/apis/api/drive.googleapis.com/overview)
 4. Create OAuth 2.0 credentials:
    - Application type: Web application
    - Authorized redirect URIs: `http://localhost:3000/api/auth/callback/google`
@@ -97,6 +103,8 @@ Copy the output and use it as your `NEXTAUTH_SECRET`.
    - `profile`
    - `https://www.googleapis.com/auth/calendar`
    - `https://www.googleapis.com/auth/drive.file`
+
+**Note:** After enabling the APIs, wait 2-3 minutes for the changes to propagate before testing.
 
 ### Installation
 
@@ -153,10 +161,32 @@ If you're redirected back to the sign-in page:
 
 If Google Calendar/Drive features aren't working:
 
-1. Verify APIs are enabled in Google Cloud Console
-2. Check that OAuth consent screen is configured
-3. Ensure redirect URIs match exactly (including http/https)
-4. Verify the user has granted all required permissions
+1. **"API has not been used in project before or it is disabled"**
+
+   - Follow the [Google API Setup Guide](./GOOGLE_API_SETUP.md)
+   - Enable both Google Calendar API and Google Drive API
+   - Wait 2-3 minutes after enabling
+   - Restart your development server
+   - Sign out and sign back in
+
+2. **"Access Not Configured"**
+
+   - Check that the OAuth consent screen is properly configured
+   - Verify that all required scopes are added
+   - Make sure the redirect URIs match exactly (including http/https)
+
+3. **"Invalid Client"**
+
+   - Verify your `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are correct
+   - Check that there are no extra spaces or quotes in your `.env.local` file
+   - Make sure you're using the credentials from the correct Google Cloud project
+
+4. **"Insufficient Permissions"**
+   - Sign out and sign back in to grant the new permissions
+   - Check that the OAuth scopes include calendar and drive.file
+   - Verify the user has granted all requested permissions
+
+For detailed troubleshooting, see [GOOGLE_API_SETUP.md](./GOOGLE_API_SETUP.md).
 
 ## Project Structure
 

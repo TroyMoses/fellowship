@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
 import { Suspense } from "react";
 import { AuthSessionProvider } from "@/components/providers/session-provider";
+// @ts-expect-error - css
 import "./globals.css";
 
 export const metadata: Metadata = {

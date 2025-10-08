@@ -1,128 +1,167 @@
-import { google } from "googleapis"
-import { getGoogleClient } from "./google-auth"
-import type { ObjectId } from "mongodb"
-import { Readable } from "stream"
+import { google } from "googleapis";
+import { getGoogleClient } from "./google-auth";
+import type { ObjectId } from "mongodb";
+import { Readable } from "stream";
 
 export interface CreateFolderParams {
-  institutionId: string | ObjectId
-  folderName: string
-  parentFolderId?: string
+  institutionId: string | ObjectId;
+  folderName: string;
+  parentFolderId?: string;
 }
 
 export interface UploadFileParams {
-  institutionId: string | ObjectId
-  fileName: string
-  mimeType: string
-  fileBuffer: Buffer
-  folderId: string
+  institutionId: string | ObjectId;
+  fileName: string;
+  mimeType: string;
+  fileBuffer: Buffer;
+  folderId: string;
 }
 
 export interface DriveFile {
-  id: string
-  name: string
-  mimeType: string
-  webViewLink: string
-  webContentLink?: string
-  thumbnailLink?: string
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink: string;
+  webContentLink?: string;
+  thumbnailLink?: string;
 }
 
 /**
  * Create a Google Drive folder
  */
-export async function createDriveFolder(params: CreateFolderParams): Promise<DriveFile> {
-  const { institutionId, folderName, parentFolderId } = params
+export async function createDriveFolder(
+  params: CreateFolderParams
+): Promise<DriveFile> {
+  const { institutionId, folderName, parentFolderId } = params;
 
-  const oauth2Client = await getGoogleClient(institutionId)
-  const drive = google.drive({ version: "v3", auth: oauth2Client })
+  try {
+    const oauth2Client = await getGoogleClient(institutionId);
+    const drive = google.drive({ version: "v3", auth: oauth2Client });
 
-  const fileMetadata: any = {
-    name: folderName,
-    mimeType: "application/vnd.google-apps.folder",
-  }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fileMetadata: any = {
+      name: folderName,
+      mimeType: "application/vnd.google-apps.folder",
+    };
 
-  if (parentFolderId) {
-    fileMetadata.parents = [parentFolderId]
-  }
+    if (parentFolderId) {
+      fileMetadata.parents = [parentFolderId];
+    }
 
-  const response = await drive.files.create({
-    requestBody: fileMetadata,
-    fields: "id, name, mimeType, webViewLink",
-  })
+    const response = await drive.files.create({
+      requestBody: fileMetadata,
+      fields: "id, name, mimeType, webViewLink",
+    });
 
-  // Make folder accessible to anyone with the link
-  await drive.permissions.create({
-    fileId: response.data.id!,
-    requestBody: {
-      role: "reader",
-      type: "anyone",
-    },
-  })
+    // Make folder accessible to anyone with the link
+    await drive.permissions.create({
+      fileId: response.data.id!,
+      requestBody: {
+        role: "reader",
+        type: "anyone",
+      },
+    });
 
-  return {
-    id: response.data.id!,
-    name: response.data.name!,
-    mimeType: response.data.mimeType!,
-    webViewLink: response.data.webViewLink!,
+    return {
+      id: response.data.id!,
+      name: response.data.name!,
+      mimeType: response.data.mimeType!,
+      webViewLink: response.data.webViewLink!,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    if (error.code === 403) {
+      throw new Error(
+        "Google Drive API is not enabled. Please enable it in Google Cloud Console: " +
+          "https://console.developers.google.com/apis/api/drive.googleapis.com/overview " +
+          "Then wait 2-3 minutes and try again. See GOOGLE_API_SETUP.md for detailed instructions."
+      );
+    }
+    if (error.code === 401) {
+      throw new Error(
+        "Google authentication failed. Please sign out and sign back in to refresh your Google permissions."
+      );
+    }
+    throw new Error(`Failed to create Drive folder: ${error.message}`);
   }
 }
 
 /**
  * Upload a file to Google Drive
  */
-export async function uploadFileToDrive(params: UploadFileParams): Promise<DriveFile> {
-  const { institutionId, fileName, mimeType, fileBuffer, folderId } = params
+export async function uploadFileToDrive(
+  params: UploadFileParams
+): Promise<DriveFile> {
+  const { institutionId, fileName, mimeType, fileBuffer, folderId } = params;
 
-  const oauth2Client = await getGoogleClient(institutionId)
-  const drive = google.drive({ version: "v3", auth: oauth2Client })
+  try {
+    const oauth2Client = await getGoogleClient(institutionId);
+    const drive = google.drive({ version: "v3", auth: oauth2Client });
 
-  const fileMetadata = {
-    name: fileName,
-    parents: [folderId],
-  }
+    const fileMetadata = {
+      name: fileName,
+      parents: [folderId],
+    };
 
-  const media = {
-    mimeType,
-    body: Readable.from(fileBuffer),
-  }
+    const media = {
+      mimeType,
+      body: Readable.from(fileBuffer),
+    };
 
-  const response = await drive.files.create({
-    requestBody: fileMetadata,
-    media,
-    fields: "id, name, mimeType, webViewLink, webContentLink, thumbnailLink",
-  })
+    const response = await drive.files.create({
+      requestBody: fileMetadata,
+      media,
+      fields: "id, name, mimeType, webViewLink, webContentLink, thumbnailLink",
+    });
 
-  // Make file accessible to anyone with the link
-  await drive.permissions.create({
-    fileId: response.data.id!,
-    requestBody: {
-      role: "reader",
-      type: "anyone",
-    },
-  })
+    // Make file accessible to anyone with the link
+    await drive.permissions.create({
+      fileId: response.data.id!,
+      requestBody: {
+        role: "reader",
+        type: "anyone",
+      },
+    });
 
-  return {
-    id: response.data.id!,
-    name: response.data.name!,
-    mimeType: response.data.mimeType!,
-    webViewLink: response.data.webViewLink!,
-    webContentLink: response.data.webContentLink,
-    thumbnailLink: response.data.thumbnailLink,
+    return {
+      id: response.data.id!,
+      name: response.data.name!,
+      mimeType: response.data.mimeType!,
+      webViewLink: response.data.webViewLink!,
+      // @ts-expect-error - content link
+      webContentLink: response.data.webContentLink,
+      // @ts-expect-error - thumbnail link
+      thumbnailLink: response.data.thumbnailLink,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    if (error.code === 403) {
+      throw new Error(
+        "Google Drive API is not enabled. See GOOGLE_API_SETUP.md for setup instructions."
+      );
+    }
+    throw new Error(`Failed to upload file to Drive: ${error.message}`);
   }
 }
 
 /**
  * List files in a Google Drive folder
  */
-export async function listDriveFiles(institutionId: string | ObjectId, folderId: string): Promise<DriveFile[]> {
-  const oauth2Client = await getGoogleClient(institutionId)
-  const drive = google.drive({ version: "v3", auth: oauth2Client })
+export async function listDriveFiles(
+  institutionId: string | ObjectId,
+  folderId: string
+): Promise<DriveFile[]> {
+  const oauth2Client = await getGoogleClient(institutionId);
+  const drive = google.drive({ version: "v3", auth: oauth2Client });
 
   const response = await drive.files.list({
     q: `'${folderId}' in parents and trashed = false`,
-    fields: "files(id, name, mimeType, webViewLink, webContentLink, thumbnailLink)",
+    fields:
+      "files(id, name, mimeType, webViewLink, webContentLink, thumbnailLink)",
     orderBy: "createdTime desc",
-  })
+  });
 
+  // @ts-expect-error - return
   return (response.data.files || []).map((file) => ({
     id: file.id!,
     name: file.name!,
@@ -130,19 +169,22 @@ export async function listDriveFiles(institutionId: string | ObjectId, folderId:
     webViewLink: file.webViewLink!,
     webContentLink: file.webContentLink,
     thumbnailLink: file.thumbnailLink,
-  }))
+  }));
 }
 
 /**
  * Delete a file from Google Drive
  */
-export async function deleteDriveFile(institutionId: string | ObjectId, fileId: string): Promise<void> {
-  const oauth2Client = await getGoogleClient(institutionId)
-  const drive = google.drive({ version: "v3", auth: oauth2Client })
+export async function deleteDriveFile(
+  institutionId: string | ObjectId,
+  fileId: string
+): Promise<void> {
+  const oauth2Client = await getGoogleClient(institutionId);
+  const drive = google.drive({ version: "v3", auth: oauth2Client });
 
   await drive.files.delete({
     fileId,
-  })
+  });
 }
 
 /**
@@ -151,10 +193,10 @@ export async function deleteDriveFile(institutionId: string | ObjectId, fileId: 
 export async function grantFolderAccess(
   institutionId: string | ObjectId,
   folderId: string,
-  userEmails: string[],
+  userEmails: string[]
 ): Promise<void> {
-  const oauth2Client = await getGoogleClient(institutionId)
-  const drive = google.drive({ version: "v3", auth: oauth2Client })
+  const oauth2Client = await getGoogleClient(institutionId);
+  const drive = google.drive({ version: "v3", auth: oauth2Client });
 
   for (const email of userEmails) {
     await drive.permissions.create({
@@ -165,7 +207,7 @@ export async function grantFolderAccess(
         emailAddress: email,
       },
       sendNotificationEmail: false,
-    })
+    });
   }
 }
 
@@ -175,25 +217,27 @@ export async function grantFolderAccess(
 export async function revokeFolderAccess(
   institutionId: string | ObjectId,
   folderId: string,
-  userEmails: string[],
+  userEmails: string[]
 ): Promise<void> {
-  const oauth2Client = await getGoogleClient(institutionId)
-  const drive = google.drive({ version: "v3", auth: oauth2Client })
+  const oauth2Client = await getGoogleClient(institutionId);
+  const drive = google.drive({ version: "v3", auth: oauth2Client });
 
   // Get all permissions for the folder
   const permissions = await drive.permissions.list({
     fileId: folderId,
     fields: "permissions(id, emailAddress)",
-  })
+  });
 
   // Find and delete permissions for specified emails
   for (const email of userEmails) {
-    const permission = permissions.data.permissions?.find((p) => p.emailAddress === email)
+    const permission = permissions.data.permissions?.find(
+      (p) => p.emailAddress === email
+    );
     if (permission?.id) {
       await drive.permissions.delete({
         fileId: folderId,
         permissionId: permission.id,
-      })
+      });
     }
   }
 }
