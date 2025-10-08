@@ -34,8 +34,16 @@ export async function createDriveFolder(
 ): Promise<DriveFile> {
   const { institutionId, folderName, parentFolderId } = params;
 
+  console.log("[v0] Creating Drive folder:", {
+    institutionId: institutionId.toString(),
+    folderName,
+    parentFolderId,
+  });
+
   try {
     const oauth2Client = await getGoogleClient(institutionId);
+    console.log("[v0] Got Google client, creating drive instance");
+
     const drive = google.drive({ version: "v3", auth: oauth2Client });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,28 +56,71 @@ export async function createDriveFolder(
       fileMetadata.parents = [parentFolderId];
     }
 
-    const response = await drive.files.create({
-      requestBody: fileMetadata,
-      fields: "id, name, mimeType, webViewLink",
-    });
+    console.log(
+      "[v0] Calling Drive API to create folder with metadata:",
+      fileMetadata
+    );
+
+    let response;
+    try {
+      response = await drive.files.create({
+        requestBody: fileMetadata,
+        fields: "id, name, mimeType, webViewLink",
+      });
+      console.log("[v0] Drive API response received:", {
+        hasResponse: !!response,
+        hasData: !!response?.data,
+        dataKeys: response?.data ? Object.keys(response.data) : [],
+      });
+    } catch (apiError: any) {
+      console.error("[v0] Drive API call failed:", {
+        message: apiError.message,
+        code: apiError.code,
+        errors: apiError.errors,
+        stack: apiError.stack,
+      });
+      throw apiError;
+    }
+
+    if (!response || !response.data) {
+      console.error(
+        "[v0] Invalid response from Drive API - response or data is undefined"
+      );
+      throw new Error("Invalid response from Google Drive API");
+    }
+
+    if (!response.data.id) {
+      console.error("[v0] Drive API response missing file ID:", response.data);
+      throw new Error("Google Drive API did not return a file ID");
+    }
+
+    console.log("[v0] Folder created successfully, setting permissions");
 
     // Make folder accessible to anyone with the link
     await drive.permissions.create({
-      fileId: response.data.id!,
+      fileId: response.data.id,
       requestBody: {
         role: "reader",
         type: "anyone",
       },
     });
 
+    console.log("[v0] Permissions set successfully");
+
     return {
-      id: response.data.id!,
+      id: response.data.id,
       name: response.data.name!,
       mimeType: response.data.mimeType!,
       webViewLink: response.data.webViewLink!,
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
+    console.error("[v0] Error in createDriveFolder:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
+
     if (error.code === 403) {
       throw new Error(
         "Google Drive API is not enabled. Please enable it in Google Cloud Console: " +
