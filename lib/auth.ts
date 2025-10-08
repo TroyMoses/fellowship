@@ -1,14 +1,16 @@
-import type { NextAuthOptions } from "next-auth"
-import GoogleProvider from "next-auth/providers/google"
-import { MongoDBAdapter } from "@auth/mongodb-adapter"
-import clientPromise from "./mongodb"
+import type { NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import { getDatabaseSafe } from "./mongodb";
 
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-  throw new Error("Please add Google OAuth credentials to .env.local")
+  throw new Error("Please add Google OAuth credentials to .env.local");
+}
+
+if (!process.env.NEXTAUTH_SECRET) {
+  throw new Error("Please add NEXTAUTH_SECRET to .env.local");
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: MongoDBAdapter(clientPromise),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -30,21 +32,209 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id
-        // @ts-ignore - Add custom fields
-        session.user.role = user.role || "fellow"
-        // @ts-ignore
-        session.user.institutionId = user.institutionId
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async signIn({ user, account, profile }) {
+      console.log("[v0] SignIn callback", { email: user.email });
+
+      if (account?.provider === "google") {
+        try {
+          const db = await getDatabaseSafe();
+
+          // If MongoDB is unavailable, allow signin but log warning
+          if (!db) {
+            console.warn(
+              "[v0] MongoDB unavailable, allowing signin without database save"
+            );
+            return true;
+          }
+
+          const usersCollection = db.collection("users");
+          const accountsCollection = db.collection("accounts");
+
+          // Check if user exists
+          const existingUser = await usersCollection.findOne({
+            email: user.email,
+          });
+
+          if (!existingUser) {
+            // Create new user
+            const newUser = {
+              email: user.email,
+              name: user.name,
+              image: user.image,
+              emailVerified: new Date(),
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            };
+            const result = await usersCollection.insertOne(newUser);
+            console.log("[v0] Created new user", { userId: result.insertedId });
+
+            // Save account info
+            await accountsCollection.insertOne({
+              userId: result.insertedId,
+              type: account.type,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              access_token: account.access_token,
+              expires_at: account.expires_at,
+              refresh_token: account.refresh_token,
+              token_type: account.token_type,
+              scope: account.scope,
+              id_token: account.id_token,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+          } else {
+            // Update existing user
+            await usersCollection.updateOne(
+              { email: user.email },
+              {
+                $set: {
+                  name: user.name,
+                  image: user.image,
+                  updatedAt: new Date(),
+                },
+              }
+            );
+
+            // Update or create account
+            await accountsCollection.updateOne(
+              {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              },
+              {
+                $set: {
+                  access_token: account.access_token,
+                  expires_at: account.expires_at,
+                  refresh_token: account.refresh_token,
+                  token_type: account.token_type,
+                  scope: account.scope,
+                  id_token: account.id_token,
+                  updatedAt: new Date(),
+                },
+              },
+              { upsert: true }
+            );
+
+            console.log("[v0] Updated existing user", { email: user.email });
+          }
+
+          return true;
+        } catch (error) {
+          console.error("[v0] Error in signIn callback:", error);
+          console.warn("[v0] Allowing signin despite database error");
+          return true;
+        }
       }
-      return session
+
+      return true;
+    },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async jwt({ token, user, account, trigger }) {
+      // Initial sign in
+      if (user) {
+        try {
+          const db = await getDatabaseSafe();
+
+          if (db) {
+            const usersCollection = db.collection("users");
+            const dbUser = await usersCollection.findOne({ email: user.email });
+
+            if (dbUser) {
+              token.id = dbUser._id.toString();
+              token.role = dbUser.role || null;
+              token.institutionId = dbUser.institutionId?.toString() || null;
+              console.log("[v0] JWT token created", {
+                role: token.role,
+                hasInstitution: !!token.institutionId,
+              });
+            } else {
+              token.id = user.email;
+              token.role = null;
+              token.institutionId = null;
+              console.log(
+                "[v0] JWT token created with defaults (user not in DB)"
+              );
+            }
+          } else {
+            token.id = user.email;
+            token.role = null;
+            token.institutionId = null;
+            console.log(
+              "[v0] JWT token created with defaults (MongoDB unavailable)"
+            );
+          }
+        } catch (error) {
+          console.error("[v0] Error fetching user in JWT callback:", error);
+          token.id = user.email;
+          token.role = null;
+          token.institutionId = null;
+        }
+      }
+
+      if (trigger === "update" && token.email) {
+        try {
+          const db = await getDatabaseSafe();
+
+          if (db) {
+            const usersCollection = db.collection("users");
+            const dbUser = await usersCollection.findOne({
+              email: token.email,
+            });
+
+            if (dbUser) {
+              token.id = dbUser._id.toString();
+              token.role = dbUser.role || null;
+              token.institutionId = dbUser.institutionId?.toString() || null;
+              console.log("[v0] JWT token updated from database", {
+                role: token.role,
+                hasInstitution: !!token.institutionId,
+              });
+            }
+          }
+        } catch (error) {
+          console.error("[v0] Error updating JWT token:", error);
+        }
+      }
+
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        // @ts-expect-error - Role
+        session.user.role = token.role as string | null;
+        // @ts-expect-error - Institution id
+        session.user.institutionId = token.institutionId as string | null;
+
+        console.log("[v0] Session created", { role: session.user.role });
+      }
+      return session;
+    },
+    async redirect({ url, baseUrl }) {
+      console.log("[v0] Redirect callback", { url, baseUrl });
+
+      // Always redirect to dashboard after signin, middleware will handle role-based routing
+      if (url.includes("/auth/signin") || url.includes("/api/auth/signin")) {
+        return `${baseUrl}/dashboard`;
+      }
+
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
     },
   },
   pages: {
     signIn: "/auth/signin",
+    error: "/auth/signin",
   },
   session: {
-    strategy: "database",
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-}
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
+};

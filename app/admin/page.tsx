@@ -30,7 +30,7 @@ export default async function AdminDashboardPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Welcome back, {session?.user?.name}</h2>
-        <p className="text-muted-foreground">Here's what's happening with your fellowship programs</p>
+        <p className="text-muted-foreground">Here&apos;s what&apos;s happening with your fellowship programs</p>
       </div>
 
       {/* Stats Grid */}
