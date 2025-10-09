@@ -13,13 +13,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Calendar, FolderOpen, Home } from "lucide-react";
+import {
+  LogOut,
+  User,
+  Calendar,
+  FolderOpen,
+  Home,
+  Building2,
+  UserPlus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/fellow", icon: Home },
   { name: "Sessions", href: "/fellow/sessions", icon: Calendar },
   { name: "Content", href: "/fellow/content", icon: FolderOpen },
+  { name: "Fellowships", href: "/fellow/fellowships", icon: Building2 },
+  { name: "Invite", href: "/fellow/invite", icon: UserPlus },
 ];
 
 export function FellowHeader() {

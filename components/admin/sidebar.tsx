@@ -4,13 +4,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar, FolderOpen, Home, Settings, Users } from "lucide-react";
+import {
+  Calendar,
+  FolderOpen,
+  Home,
+  Settings,
+  Users,
+  FileText,
+  UserPlus,
+} from "lucide-react";
 
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: Home },
   { name: "Cohorts", href: "/admin/cohorts", icon: Users },
   { name: "Sessions", href: "/admin/sessions", icon: Calendar },
   { name: "Content", href: "/admin/content", icon: FolderOpen },
+  { name: "Applications", href: "/admin/applications", icon: FileText },
+  { name: "Fellows", href: "/admin/fellows", icon: Users },
+  { name: "Invite", href: "/admin/invite", icon: UserPlus },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
