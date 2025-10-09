@@ -185,7 +185,7 @@ export function ApplicationForm({ institutionId }: ApplicationFormProps) {
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting} className="flex-1">
+        <Button type="submit" disabled={isSubmitting} className="flex-1 cursor-pointer">
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
