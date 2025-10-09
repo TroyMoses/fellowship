@@ -13,32 +13,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { institutionId, emails, message } = await request.json();
+    const { emails, message } = await request.json();
 
-    if (
-      !institutionId ||
-      !emails ||
-      !Array.isArray(emails) ||
-      emails.length === 0
-    ) {
-      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      return NextResponse.json(
+        { error: "At least one email is required" },
+        { status: 400 }
+      );
     }
 
     const db = await getDatabase();
 
-    // Get institution details
-    const institution = await db
-      .collection("institutions")
-      .findOne({ _id: new ObjectId(institutionId) });
-
-    if (!institution) {
-      return NextResponse.json(
-        { error: "Institution not found" },
-        { status: 404 }
-      );
-    }
-
-    // Get user details for the inviter
+    // Get user details
     const user = await db
       .collection("users")
       .findOne({ _id: new ObjectId(session.user.id) });
@@ -47,74 +33,54 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Verify user has access to this institution
-    if (
-      user.role === "fellow" &&
-      user.institutionId?.toString() !== institutionId
-    ) {
-      return NextResponse.json(
-        { error: "You can only invite to your own institution" },
-        { status: 403 }
-      );
-    }
+    // Get institution details
+    const institution = await db
+      .collection("institutions")
+      .findOne({ _id: user.institutionId });
 
-    if (
-      user.role === "admin" &&
-      user.institutionId?.toString() !== institutionId
-    ) {
+    if (!institution) {
       return NextResponse.json(
-        { error: "You can only invite to your own institution" },
-        { status: 403 }
+        { error: "Institution not found" },
+        { status: 404 }
       );
     }
 
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const inviteUrl = `${baseUrl}/fellow/fellowships`;
+    const signupUrl = `${baseUrl}/fellow/fellowships`;
 
-    // Send invitations
-    const results = await Promise.allSettled(
-      emails.map(async (email) => {
-        const emailTemplate = emailTemplates.fellowshipInvitation(
-          user.name,
-          institution.name,
-          inviteUrl
-        );
-
-        // Add custom message if provided
-        let htmlWithMessage = emailTemplate.html;
-        if (message) {
-          htmlWithMessage = htmlWithMessage.replace(
-            '<div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">',
-            `<div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
-              <p style="margin: 0 0 15px 0; font-size: 14px; color: #333; font-style: italic;">"${message}"</p>
-              <p style="margin: 0; font-size: 14px; color: #666; padding-top: 15px; border-top: 1px solid #e5e7eb;">`
-          );
-        }
-
-        return sendEmail({
-          to: email,
-          subject: emailTemplate.subject,
-          html: htmlWithMessage,
-        });
-      })
+    const emailTemplate = emailTemplates.invitation(
+      user.name || "A fellow member",
+      institution.name,
+      message || "",
+      signupUrl
     );
 
-    const successful = results.filter((r) => r.status === "fulfilled").length;
-    const failed = results.filter((r) => r.status === "rejected").length;
+    // Send invitations
+    const results = [];
+    for (const email of emails) {
+      try {
+        await sendEmail({
+          to: email.trim(),
+          subject: emailTemplate.subject,
+          html: emailTemplate.html,
+        });
+        results.push({ email, success: true });
+      } catch (error) {
+        console.error(`[v0] Failed to send invitation to ${email}:`, error);
+        results.push({ email, success: false, error: String(error) });
+      }
+    }
 
     console.log("[v0] Invitations sent:", {
-      institutionName: institution.name,
-      inviterName: user.name,
-      inviterRole: user.role,
-      successful,
-      failed,
-      total: emails.length,
+      inviter: user.name,
+      institution: institution.name,
+      totalEmails: emails.length,
+      successful: results.filter((r) => r.success).length,
     });
 
     return NextResponse.json({
       success: true,
-      sent: successful,
-      failed,
+      results,
     });
   } catch (error) {
     console.error("[v0] Error sending invitations:", error);
