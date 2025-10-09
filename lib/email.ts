@@ -1,5 +1,49 @@
-// Email notification utility using Resend
-// To use this, add RESEND_API_KEY to your environment variables
+import { Resend } from "resend";
+import nodemailer from "nodemailer";
+
+// Email configuration
+const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || "resend"; // 'resend' or 'nodemailer'
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const EMAIL_FROM =
+  process.env.EMAIL_FROM || "Fellowship Platform <noreply@fellowship.com>";
+
+// Nodemailer configuration
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = process.env.SMTP_PORT
+  ? Number.parseInt(process.env.SMTP_PORT)
+  : 587;
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASSWORD = process.env.SMTP_PASSWORD;
+const SMTP_SECURE = process.env.SMTP_SECURE === "true"; // true for 465, false for other ports
+
+// Initialize email clients
+let resend: Resend | null = null;
+let nodemailerTransporter: nodemailer.Transporter | null = null;
+
+if (EMAIL_PROVIDER === "resend" && RESEND_API_KEY) {
+  resend = new Resend(RESEND_API_KEY);
+  console.log("[v0] Email provider: Resend");
+} else if (
+  EMAIL_PROVIDER === "nodemailer" &&
+  SMTP_HOST &&
+  SMTP_USER &&
+  SMTP_PASSWORD
+) {
+  nodemailerTransporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASSWORD,
+    },
+  });
+  console.log("[v0] Email provider: Nodemailer");
+} else {
+  console.warn(
+    "[v0] No email provider configured. Emails will be logged to console only."
+  );
+}
 
 interface EmailOptions {
   to: string;
@@ -8,46 +52,53 @@ interface EmailOptions {
 }
 
 export async function sendEmail({ to, subject, html }: EmailOptions) {
-  // Check if Resend API key is configured
-  const apiKey = process.env.RESEND_API_KEY;
-
-  if (!apiKey) {
-    console.warn("[v0] RESEND_API_KEY not configured. Email not sent:", {
+  try {
+    console.log("[v0] Attempting to send email:", {
       to,
       subject,
+      provider: EMAIL_PROVIDER,
     });
-    return { success: false, error: "Email service not configured" };
-  }
 
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        from:
-          process.env.EMAIL_FROM ||
-          "Fellowship Platform <onboarding@resend.dev>",
+    if (EMAIL_PROVIDER === "resend" && resend) {
+      // Send via Resend
+      const result = await resend.emails.send({
+        from: EMAIL_FROM,
         to,
         subject,
         html,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("[v0] Failed to send email:", data);
-      return { success: false, error: data.message || "Failed to send email" };
+      });
+      console.log("[v0] Email sent successfully via Resend:", result);
+      return { success: true, provider: "resend", result };
+    } else if (EMAIL_PROVIDER === "nodemailer" && nodemailerTransporter) {
+      // Send via Nodemailer
+      const result = await nodemailerTransporter.sendMail({
+        from: EMAIL_FROM,
+        to,
+        subject,
+        html,
+      });
+      console.log(
+        "[v0] Email sent successfully via Nodemailer:",
+        result.messageId
+      );
+      return { success: true, provider: "nodemailer", result };
+    } else {
+      // No provider configured - log to console
+      console.log("[v0] Email would be sent (no provider configured):", {
+        from: EMAIL_FROM,
+        to,
+        subject,
+        htmlPreview: html.substring(0, 200) + "...",
+      });
+      return {
+        success: false,
+        provider: "none",
+        message: "No email provider configured",
+      };
     }
-
-    console.log("[v0] Email sent successfully:", { to, subject, id: data.id });
-    return { success: true, id: data.id };
   } catch (error) {
     console.error("[v0] Error sending email:", error);
-    return { success: false, error: "Failed to send email" };
+    throw error;
   }
 }
 
@@ -58,41 +109,41 @@ export const emailTemplates = {
     institutionName: string,
     applicationUrl: string
   ) => ({
-    subject: `New Fellowship Application from ${applicantName}`,
+    subject: `New Fellowship Application - ${applicantName}`,
     html: `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Fellowship Application</title>
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">New Fellowship Application</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">New Fellowship Application</h1>
           </div>
           
-          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
             <p style="font-size: 16px; margin-bottom: 20px;">Hello,</p>
             
             <p style="font-size: 16px; margin-bottom: 20px;">
               <strong>${applicantName}</strong> has submitted an application to join <strong>${institutionName}</strong>.
             </p>
             
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
-              <p style="margin: 0; font-size: 14px; color: #666;">
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #667eea;">
+              <p style="margin: 0; font-size: 14px; color: #6b7280;">
                 Please review the application and take appropriate action.
               </p>
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${applicationUrl}" style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+              <a href="${applicationUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
                 Review Application
               </a>
             </div>
             
-            <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              Best regards,<br>
-              Fellowship Platform Team
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              This is an automated notification from the Fellowship Platform.
             </p>
           </div>
         </body>
@@ -101,45 +152,45 @@ export const emailTemplates = {
   }),
 
   applicationApproved: (
-    applicantName: string,
+    fellowName: string,
     institutionName: string,
     dashboardUrl: string
   ) => ({
-    subject: `Congratulations! Your Fellowship Application has been Approved`,
+    subject: `Congratulations! Your Fellowship Application Has Been Approved`,
     html: `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Application Approved</title>
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">🎉 Application Approved!</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Application Approved!</h1>
           </div>
           
-          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-            <p style="font-size: 16px; margin-bottom: 20px;">Dear ${applicantName},</p>
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Dear ${fellowName},</p>
             
             <p style="font-size: 16px; margin-bottom: 20px;">
               Congratulations! Your application to join <strong>${institutionName}</strong> has been approved.
             </p>
             
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
-              <p style="margin: 0; font-size: 14px; color: #666;">
-                You now have access to all fellowship content, sessions, and resources. We're excited to have you as part of our community!
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #10b981;">
+              <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                You now have full access to all fellowship content, sessions, and resources. Welcome to the community!
               </p>
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${dashboardUrl}" style="display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                Access Your Dashboard
+              <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Go to Dashboard
               </a>
             </div>
             
-            <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              Welcome aboard!<br>
-              Fellowship Platform Team
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              This is an automated notification from the Fellowship Platform.
             </p>
           </div>
         </body>
@@ -147,7 +198,7 @@ export const emailTemplates = {
     `,
   }),
 
-  applicationRejected: (applicantName: string, institutionName: string) => ({
+  applicationRejected: (fellowName: string, institutionName: string) => ({
     subject: `Update on Your Fellowship Application`,
     html: `
       <!DOCTYPE html>
@@ -155,32 +206,32 @@ export const emailTemplates = {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Application Update</title>
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">Application Update</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">Application Update</h1>
           </div>
           
-          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-            <p style="font-size: 16px; margin-bottom: 20px;">Dear ${applicantName},</p>
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Dear ${fellowName},</p>
             
             <p style="font-size: 16px; margin-bottom: 20px;">
               Thank you for your interest in joining <strong>${institutionName}</strong>.
             </p>
             
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #6b7280;">
-              <p style="margin: 0; font-size: 14px; color: #666;">
-                After careful consideration, we regret to inform you that we are unable to accept your application at this time. We appreciate the time and effort you put into your application.
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              After careful consideration, we regret to inform you that we are unable to accept your application at this time.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #6b7280;">
+              <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                We encourage you to continue pursuing your goals and wish you the best in your future endeavors.
               </p>
             </div>
             
-            <p style="font-size: 16px; margin-bottom: 20px;">
-              We encourage you to apply again in the future as new opportunities become available.
-            </p>
-            
-            <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              Best wishes,<br>
-              Fellowship Platform Team
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              This is an automated notification from the Fellowship Platform.
             </p>
           </div>
         </body>
@@ -188,46 +239,57 @@ export const emailTemplates = {
     `,
   }),
 
-  fellowshipInvitation: (
+  invitation: (
     inviterName: string,
     institutionName: string,
-    inviteUrl: string
+    message: string,
+    signupUrl: string
   ) => ({
-    subject: `You've been invited to join ${institutionName}`,
+    subject: `You're Invited to Join ${institutionName}`,
     html: `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Fellowship Invitation</title>
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">You're Invited!</h1>
+            <h1 style="color: white; margin: 0; font-size: 28px;">You're Invited!</h1>
           </div>
           
-          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
             <p style="font-size: 16px; margin-bottom: 20px;">Hello,</p>
             
             <p style="font-size: 16px; margin-bottom: 20px;">
-              <strong>${inviterName}</strong> has invited you to apply to <strong>${institutionName}</strong> fellowship program.
+              <strong>${inviterName}</strong> has invited you to join <strong>${institutionName}</strong> on the Fellowship Platform.
             </p>
             
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
-              <p style="margin: 0; font-size: 14px; color: #666;">
-                This is an exclusive opportunity to join a community of learners and professionals dedicated to growth and excellence.
-              </p>
-            </div>
+            ${
+              message
+                ? `
+              <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #667eea;">
+                <p style="margin: 0; font-size: 14px; color: #374151; font-style: italic;">
+                  "${message}"
+                </p>
+              </div>
+            `
+                : ""
+            }
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Join us to access exclusive content, connect with fellow members, and participate in engaging sessions.
+            </p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${inviteUrl}" style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                View Fellowship & Apply
+              <a href="${signupUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Apply Now
               </a>
             </div>
             
-            <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              Best regards,<br>
-              Fellowship Platform Team
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              This is an automated invitation from the Fellowship Platform.
             </p>
           </div>
         </body>
