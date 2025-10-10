@@ -1,24 +1,30 @@
-import type React from "react"
-import { redirect } from "next/navigation"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { FellowHeader } from "@/components/fellow/header"
+import type React from "react";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { FellowHeader } from "@/components/fellow/header";
 
-export default async function FellowLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession(authOptions)
+export default async function FellowLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect("/auth/signin")
+    redirect("/auth/signin");
   }
 
   if (session.user.role === "admin") {
-    redirect("/admin")
+    redirect("/admin");
   }
 
   return (
     <div className="min-h-screen bg-background">
       <FellowHeader />
-      <main className="container mx-auto px-4 py-8">{children}</main>
+      <main className="container mx-auto px-4 py-6 md:py-8 max-w-7xl">
+        {children}
+      </main>
     </div>
-  )
+  );
 }

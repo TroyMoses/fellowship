@@ -2,8 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarRail,
+} from "@/components/ui/sidebar";
 import {
   Calendar,
   FolderOpen,
@@ -29,38 +37,48 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-full w-64 flex-col border-r border-border bg-card">
-      <div className="flex h-16 items-center gap-2 border-b border-border px-6">
-        <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-sm">FP</span>
+    <Sidebar collapsible="offcanvas">
+      <SidebarHeader className="border-b border-border">
+        <div className="flex h-16 items-center gap-2 px-4">
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">
+              FP
+            </span>
+          </div>
+          <span className="font-semibold">Fellowship Platform</span>
         </div>
-        <span className="font-semibold">Fellowship Platform</span>
-      </div>
+      </SidebarHeader>
 
-      <nav className="flex-1 space-y-1 p-4">
-        {navigation.map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link key={item.name} href={item.href}>
-              <Button
-                variant={isActive ? "secondary" : "ghost"}
-                className={cn(
-                  "w-full justify-start cursor-pointer",
-                  isActive && "bg-secondary"
-                )}
-              >
-                <item.icon className="mr-3 h-5 w-5" />
-                {item.name}
-              </Button>
-            </Link>
-          );
-        })}
-      </nav>
+      <SidebarContent>
+        <SidebarMenu>
+          {navigation.map((item) => {
+            const isActive =
+              pathname === item.href || pathname.startsWith(item.href + "/");
+            return (
+              <SidebarMenuItem key={item.name}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  tooltip={item.name}
+                >
+                  <Link href={item.href}>
+                    <item.icon />
+                    <span>{item.name}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarContent>
 
-      <div className="border-t border-border p-4">
-        <p className="text-xs text-muted-foreground">Admin Portal</p>
-      </div>
-    </div>
+      <SidebarFooter className="border-t border-border">
+        <div className="p-4">
+          <p className="text-xs text-muted-foreground">Admin Portal</p>
+        </div>
+      </SidebarFooter>
+
+      <SidebarRail />
+    </Sidebar>
   );
 }

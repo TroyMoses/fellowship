@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AdminSidebar } from "@/components/admin/sidebar";
 import { AdminHeader } from "@/components/admin/header";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
 export default async function AdminLayout({
   children,
@@ -21,12 +22,12 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <SidebarProvider defaultOpen={true}>
       <AdminSidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <SidebarInset>
         <AdminHeader />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
-      </div>
-    </div>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
