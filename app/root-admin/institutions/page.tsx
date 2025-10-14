@@ -110,7 +110,7 @@ export default async function InstitutionsListPage({
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold">Institutions</h1>
               <p className="text-sm text-muted-foreground">
                 {searchParams.status
@@ -118,6 +118,12 @@ export default async function InstitutionsListPage({
                   : "All institutions"}
               </p>
             </div>
+            <Button asChild>
+              <Link href="/root-admin/institutions/create">
+                <Building2 className="h-4 w-4 mr-2" />
+                Create Institution
+              </Link>
+            </Button>
           </div>
         </div>
       </div>

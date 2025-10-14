@@ -57,33 +57,63 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!existingUser) {
-            // Create new user
-            const newUser = {
+            const preAssignedAdmin = await usersCollection.findOne({
               email: user.email,
-              name: user.name,
-              image: user.image,
-              emailVerified: new Date(),
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            };
-            const result = await usersCollection.insertOne(newUser);
-            console.log("[v0] Created new user", { userId: result.insertedId });
+              role: "admin",
+            });
+
+            if (preAssignedAdmin) {
+              // Update the pre-assigned admin record with full user info
+              await usersCollection.updateOne(
+                { email: user.email },
+                {
+                  $set: {
+                    name: user.name,
+                    image: user.image,
+                    emailVerified: new Date(),
+                    updatedAt: new Date(),
+                  },
+                }
+              );
+              console.log("[v0] Updated pre-assigned admin user", {
+                email: user.email,
+              });
+            } else {
+              // Create new user without role
+              const newUser = {
+                email: user.email,
+                name: user.name,
+                image: user.image,
+                emailVerified: new Date(),
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              };
+              const result = await usersCollection.insertOne(newUser);
+              console.log("[v0] Created new user", {
+                userId: result.insertedId,
+              });
+            }
 
             // Save account info
-            await accountsCollection.insertOne({
-              userId: result.insertedId,
-              type: account.type,
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              access_token: account.access_token,
-              expires_at: account.expires_at,
-              refresh_token: account.refresh_token,
-              token_type: account.token_type,
-              scope: account.scope,
-              id_token: account.id_token,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            });
+            const userId =
+              preAssignedAdmin?._id ||
+              (await usersCollection.findOne({ email: user.email }))?._id;
+            if (userId) {
+              await accountsCollection.insertOne({
+                userId: userId,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                refresh_token: account.refresh_token,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              });
+            }
           } else {
             // Update existing user
             await usersCollection.updateOne(

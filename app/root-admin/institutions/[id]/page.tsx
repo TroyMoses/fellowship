@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -20,6 +21,8 @@ import {
   User,
   Calendar,
   ExternalLink,
+  Users,
+  GraduationCap,
 } from "lucide-react";
 import Image from "next/image";
 import { ApprovalActions } from "@/components/approval-actions";
@@ -71,7 +74,20 @@ export default async function InstitutionDetailPage({
 
   const admin = await db.collection("users").findOne({
     institutionId: institution._id,
+    role: "admin",
   });
+
+  const cohorts = await db
+    .collection("cohorts")
+    .find({ institutionId: institution._id })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  const fellows = await db
+    .collection("users")
+    .find({ institutionId: institution._id, role: "fellow" })
+    .sort({ createdAt: -1 })
+    .toArray();
 
   // Calculate the correct logo source early
   const logoSrc = institution.logo
@@ -133,8 +149,53 @@ export default async function InstitutionDetailPage({
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="grid gap-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Cohorts
+                </CardTitle>
+                <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{cohorts.length}</div>
+                <p className="text-xs text-muted-foreground">Active programs</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Fellows
+                </CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{fellows.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  Enrolled students
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Status</CardTitle>
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold capitalize">
+                  {institution.status}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Institution status
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader>
               <div className="flex items-center gap-4">
@@ -211,40 +272,133 @@ export default async function InstitutionDetailPage({
               <CardHeader>
                 <CardTitle>Administrator Information</CardTitle>
                 <CardDescription>
-                  Details about the requesting admin
+                  Details about the institution admin
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <User className="h-4 w-4" />
-                      <span>Name</span>
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={admin.image || "/placeholder.svg"} />
+                    <AvatarFallback>
+                      {admin.name?.charAt(0) || "A"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="grid gap-4 md:grid-cols-2 flex-1">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Mail className="h-4 w-4" />
+                        <span>Email</span>
+                      </div>
+                      <p className="font-medium">{admin.email}</p>
                     </div>
-                    <p className="font-medium">{admin.name}</p>
-                  </div>
 
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="h-4 w-4" />
-                      <span>Email</span>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>Registered</span>
+                      </div>
+                      <p className="font-medium">
+                        {new Date(admin.createdAt).toLocaleDateString()}
+                      </p>
                     </div>
-                    <p className="font-medium">{admin.email}</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>Registered</span>
-                    </div>
-                    <p className="font-medium">
-                      {new Date(admin.createdAt).toLocaleDateString()}
-                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Cohorts ({cohorts.length})</CardTitle>
+              <CardDescription>
+                Fellowship programs in this institution
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {cohorts.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <GraduationCap className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No cohorts created yet</p>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {cohorts.map((cohort) => (
+                    <div
+                      key={cohort._id.toString()}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <h4 className="font-medium">{cohort.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {cohort.description || "No description"}
+                        </p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                          <span>
+                            Start:{" "}
+                            {new Date(cohort.startDate).toLocaleDateString()}
+                          </span>
+                          <span>
+                            End: {new Date(cohort.endDate).toLocaleDateString()}
+                          </span>
+                          <span>{cohort.fellowIds?.length || 0} fellows</span>
+                        </div>
+                      </div>
+                      <Badge
+                        variant={
+                          cohort.status === "active" ? "default" : "secondary"
+                        }
+                      >
+                        {cohort.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Fellows ({fellows.length})</CardTitle>
+              <CardDescription>
+                Students enrolled in this institution
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {fellows.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No fellows enrolled yet</p>
+                </div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {fellows.map((fellow) => (
+                    <div
+                      key={fellow._id.toString()}
+                      className="flex items-center gap-3 p-3 border rounded-lg"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={fellow.image || "/placeholder.svg"} />
+                        <AvatarFallback>
+                          {fellow.name?.charAt(0) || "F"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{fellow.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {fellow.email}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {fellow.cohortIds?.length || 0} cohort
+                          {fellow.cohortIds?.length !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {institution.status === "pending" && (
             <Card>

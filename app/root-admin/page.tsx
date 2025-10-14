@@ -9,8 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Building2, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Building2, CheckCircle, Clock, XCircle, Users } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default async function RootAdminDashboard() {
   const session = await getServerSession(authOptions);
@@ -40,6 +41,12 @@ export default async function RootAdminDashboard() {
                 Manage institution admin approvals
               </p>
             </div>
+            <Button asChild>
+              <Link href="/root-admin/institutions/create">
+                <Building2 className="h-4 w-4 mr-2" />
+                Create Institution
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
@@ -92,7 +99,7 @@ export default async function RootAdminDashboard() {
               <CardTitle className="text-sm font-medium">
                 Total Admins
               </CardTitle>
-              <Building2 className="h-4 w-4 text-blue-600" />
+              <Users className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalAdmins}</div>
@@ -106,7 +113,9 @@ export default async function RootAdminDashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Manage institution admin requests</CardDescription>
+            <CardDescription>
+              Manage institution admin requests and view all data
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <Link
@@ -137,6 +146,21 @@ export default async function RootAdminDashboard() {
                   </p>
                 </div>
                 <Building2 className="h-5 w-5 text-blue-600" />
+              </div>
+            </Link>
+
+            <Link
+              href="/root-admin/admins"
+              className="block p-4 rounded-lg border border-border hover:bg-muted transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium">View All Admins</h3>
+                  <p className="text-sm text-muted-foreground">
+                    See all institution administrators
+                  </p>
+                </div>
+                <Users className="h-5 w-5 text-purple-600" />
               </div>
             </Link>
           </CardContent>
