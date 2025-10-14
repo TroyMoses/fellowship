@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
 import type { ObjectId } from "mongodb";
-import { createDriveFolder } from "@/lib/google-drive";
+import { sendEmail, emailTemplates } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,11 +18,26 @@ export async function POST(req: NextRequest) {
 
     console.log("[v0] User authenticated:", session.user.email);
 
-    const { role } = await req.json();
+    const { role, institutionName, institutionLogo } = await req.json();
 
     if (!role || !["admin", "fellow"].includes(role)) {
       console.error("[v0] Invalid role:", role);
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    }
+
+    if (role === "admin") {
+      if (!institutionName || !institutionName.trim()) {
+        return NextResponse.json(
+          { error: "Institution name is required for admin role" },
+          { status: 400 }
+        );
+      }
+      if (!institutionLogo || !institutionLogo.trim()) {
+        return NextResponse.json(
+          { error: "Institution logo is required for admin role" },
+          { status: 400 }
+        );
+      }
     }
 
     console.log("[v0] Setting role to:", role);
@@ -44,6 +59,7 @@ export async function POST(req: NextRequest) {
     const accountsCollection = db.collection("accounts");
 
     let institutionId: ObjectId | undefined;
+    let isPending = false;
 
     if (role === "admin") {
       // Check if user already has an institution
@@ -57,6 +73,22 @@ export async function POST(req: NextRequest) {
       });
 
       if (existingUser?.institutionId) {
+        const existingInstitution = await institutionsCollection.findOne({
+          _id: existingUser.institutionId as ObjectId,
+        });
+
+        if (existingInstitution?.status === "pending") {
+          return NextResponse.json(
+            {
+              success: true,
+              pending: true,
+              institutionId: existingUser.institutionId.toString(),
+              message: "Your admin request is still pending approval",
+            },
+            { status: 200 }
+          );
+        }
+
         institutionId = existingUser.institutionId as ObjectId;
         console.log("[v0] User already has institution", {
           institutionId: institutionId.toString(),
@@ -72,11 +104,12 @@ export async function POST(req: NextRequest) {
           hasRefreshToken: !!userAccount?.refresh_token,
         });
 
-        // Create a new institution for this admin
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const institution: any = {
-          name: `${session.user.name}'s Institution`,
+          name: institutionName.trim(),
+          logo: institutionLogo.trim(),
           googleAccountEmail: session.user.email,
+          status: "pending",
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -93,8 +126,10 @@ export async function POST(req: NextRequest) {
         try {
           const result = await institutionsCollection.insertOne(institution);
           institutionId = result.insertedId;
-          console.log("[v0] Created new institution", {
+          isPending = true;
+          console.log("[v0] Created new institution with pending status", {
             institutionId: institutionId.toString(),
+            name: institutionName,
           });
         } catch (institutionError) {
           console.error("[v0] Failed to create institution:", institutionError);
@@ -104,51 +139,68 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        if (userAccount?.refresh_token) {
-          try {
-            console.log("[v0] Attempting to create Drive folder");
-            const rootFolder = await createDriveFolder({
-              institutionId: institutionId,
-              folderName: `${session.user.name}'s Fellowship Program`,
-            });
+        try {
+          const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 
-            await institutionsCollection.updateOne(
-              { _id: institutionId },
-              {
-                $set: {
-                  googleDriveFolderId: rootFolder.id,
-                  updatedAt: new Date(),
-                },
-              }
-            );
+          // Send pending email to admin
+          const pendingEmail = emailTemplates.adminPendingApproval(
+            session.user.name || session.user.email,
+            institutionName
+          );
+          await sendEmail({
+            to: session.user.email,
+            subject: pendingEmail.subject,
+            html: pendingEmail.html,
+          });
+          console.log("[v0] Sent pending email to admin");
 
-            console.log("[v0] Created institution root Drive folder", {
-              folderId: rootFolder.id,
-            });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } catch (error: any) {
-            console.error(
-              "[v0] Failed to create institution Drive folder:",
-              error.message
+          // Send notification to root admin
+          const rootAdmin = await usersCollection.findOne({
+            role: "root_admin",
+          });
+          if (rootAdmin?.email) {
+            const reviewUrl = `${baseUrl}/root-admin/institutions/${institutionId}`;
+            const rootAdminEmail = emailTemplates.rootAdminNewRequest(
+              session.user.name || session.user.email,
+              session.user.email,
+              institutionName,
+              reviewUrl
             );
-            // Don't fail the whole request if Drive folder creation fails
-            // The admin can still use the platform, just without Drive integration
+            await sendEmail({
+              to: rootAdmin.email,
+              subject: rootAdminEmail.subject,
+              html: rootAdminEmail.html,
+            });
+            console.log(
+              "[v0] Sent notification to root admin:",
+              rootAdmin.email
+            );
+          } else {
+            console.warn("[v0] No root admin found to notify");
           }
-        } else {
-          console.log("[v0] Skipping Drive folder creation - no refresh token");
+        } catch (emailError) {
+          console.error("[v0] Failed to send email notifications:", emailError);
+          // Don't fail the request if email fails
         }
       }
     }
 
-    // Update user role and institutionId
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updateData: any = {
-      role,
       updatedAt: new Date(),
     };
 
-    if (institutionId) {
+    if (isPending) {
+      // Don't set role, only set institutionId
       updateData.institutionId = institutionId;
+      console.log("[v0] Setting institutionId without role (pending approval)");
+    } else {
+      // Set role for fellows or approved admins
+      updateData.role = role;
+      if (institutionId) {
+        updateData.institutionId = institutionId;
+      }
+      console.log("[v0] Setting role and institutionId");
     }
 
     try {
@@ -177,15 +229,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("[v0] Updated user role successfully", {
+    console.log("[v0] Updated user successfully", {
       email: session.user.email,
-      role,
+      role: isPending ? "pending" : role,
       institutionId: institutionId?.toString(),
     });
 
     return NextResponse.json({
       success: true,
-      role,
+      role: isPending ? null : role,
+      pending: isPending,
       institutionId: institutionId?.toString(),
     });
   } catch (error) {

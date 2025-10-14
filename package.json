@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed:root": "node -r dotenv/config scripts/seed-root-admin.js"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.7.3",
@@ -23,6 +24,7 @@
     "@vercel/analytics": "1.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "2.1.1",
+    "dotenv": "^17.2.3",
     "geist": "1.5.1",
     "googleapis": "^144.0.0",
     "lucide-react": "^0.469.0",

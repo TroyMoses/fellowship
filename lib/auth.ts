@@ -57,33 +57,63 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!existingUser) {
-            // Create new user
-            const newUser = {
+            const preAssignedAdmin = await usersCollection.findOne({
               email: user.email,
-              name: user.name,
-              image: user.image,
-              emailVerified: new Date(),
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            };
-            const result = await usersCollection.insertOne(newUser);
-            console.log("[v0] Created new user", { userId: result.insertedId });
+              role: "admin",
+            });
+
+            if (preAssignedAdmin) {
+              // Update the pre-assigned admin record with full user info
+              await usersCollection.updateOne(
+                { email: user.email },
+                {
+                  $set: {
+                    name: user.name,
+                    image: user.image,
+                    emailVerified: new Date(),
+                    updatedAt: new Date(),
+                  },
+                }
+              );
+              console.log("[v0] Updated pre-assigned admin user", {
+                email: user.email,
+              });
+            } else {
+              // Create new user without role
+              const newUser = {
+                email: user.email,
+                name: user.name,
+                image: user.image,
+                emailVerified: new Date(),
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              };
+              const result = await usersCollection.insertOne(newUser);
+              console.log("[v0] Created new user", {
+                userId: result.insertedId,
+              });
+            }
 
             // Save account info
-            await accountsCollection.insertOne({
-              userId: result.insertedId,
-              type: account.type,
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              access_token: account.access_token,
-              expires_at: account.expires_at,
-              refresh_token: account.refresh_token,
-              token_type: account.token_type,
-              scope: account.scope,
-              id_token: account.id_token,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            });
+            const userId =
+              preAssignedAdmin?._id ||
+              (await usersCollection.findOne({ email: user.email }))?._id;
+            if (userId) {
+              await accountsCollection.insertOne({
+                userId: userId,
+                type: account.type,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token,
+                expires_at: account.expires_at,
+                refresh_token: account.refresh_token,
+                token_type: account.token_type,
+                scope: account.scope,
+                id_token: account.id_token,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              });
+            }
           } else {
             // Update existing user
             await usersCollection.updateOne(
@@ -145,6 +175,21 @@ export const authOptions: NextAuthOptions = {
               token.id = dbUser._id.toString();
               token.role = dbUser.role || null;
               token.institutionId = dbUser.institutionId?.toString() || null;
+
+              if (dbUser.institutionId) {
+                const institutionsCollection = db.collection("institutions");
+                const institution = await institutionsCollection.findOne({
+                  _id: dbUser.institutionId,
+                });
+                token.approvalStatus = institution?.status || null;
+                console.log("[v0] JWT token created with approval status", {
+                  role: token.role,
+                  approvalStatus: token.approvalStatus,
+                });
+              } else {
+                token.approvalStatus = null;
+              }
+
               console.log("[v0] JWT token created", {
                 role: token.role,
                 hasInstitution: !!token.institutionId,
@@ -153,6 +198,7 @@ export const authOptions: NextAuthOptions = {
               token.id = user.email;
               token.role = null;
               token.institutionId = null;
+              token.approvalStatus = null;
               console.log(
                 "[v0] JWT token created with defaults (user not in DB)"
               );
@@ -161,6 +207,7 @@ export const authOptions: NextAuthOptions = {
             token.id = user.email;
             token.role = null;
             token.institutionId = null;
+            token.approvalStatus = null;
             console.log(
               "[v0] JWT token created with defaults (MongoDB unavailable)"
             );
@@ -170,6 +217,7 @@ export const authOptions: NextAuthOptions = {
           token.id = user.email;
           token.role = null;
           token.institutionId = null;
+          token.approvalStatus = null;
         }
       }
 
@@ -187,9 +235,21 @@ export const authOptions: NextAuthOptions = {
               token.id = dbUser._id.toString();
               token.role = dbUser.role || null;
               token.institutionId = dbUser.institutionId?.toString() || null;
+
+              if (dbUser.institutionId) {
+                const institutionsCollection = db.collection("institutions");
+                const institution = await institutionsCollection.findOne({
+                  _id: dbUser.institutionId,
+                });
+                token.approvalStatus = institution?.status || null;
+              } else {
+                token.approvalStatus = null;
+              }
+
               console.log("[v0] JWT token updated from database", {
                 role: token.role,
                 hasInstitution: !!token.institutionId,
+                approvalStatus: token.approvalStatus,
               });
             }
           }
@@ -205,13 +265,18 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         // @ts-expect-error - Role
         session.user.role = token.role as string | null;
-        // @ts-expect-error - Institution id
         session.user.institutionId = token.institutionId as string | null;
+        // @ts-expect-error - Approval status
+        session.user.approvalStatus = token.approvalStatus as string | null;
 
-        console.log("[v0] Session created", { role: session.user.role });
+        console.log("[v0] Session created", {
+          role: session.user.role,
+          approvalStatus: session.user.approvalStatus,
+        });
       }
       return session;
     },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async redirect({ url, baseUrl }) {
       console.log("[v0] Redirect callback", { url, baseUrl });
 
