@@ -268,14 +268,12 @@ export const emailTemplates = {
             
             ${
               message
-                ? `
-              <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #667eea;">
+                ? ``
+                : `<div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #667eea;">
                 <p style="margin: 0; font-size: 14px; color: #374151; font-style: italic;">
                   "${message}"
                 </p>
-              </div>
-            `
-                : ""
+              </div>`
             }
             
             <p style="font-size: 16px; margin-bottom: 20px;">
@@ -290,6 +288,194 @@ export const emailTemplates = {
             
             <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
               This is an automated invitation from the Fellowship Platform.
+            </p>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  adminPendingApproval: (adminName: string, institutionName: string) => ({
+    subject: `Your Admin Request is Pending Approval`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Admin Request Pending</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">⏳ Request Pending</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Dear ${adminName},</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Thank you for registering <strong>${institutionName}</strong> on the Fellowship Platform.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #f59e0b;">
+              <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                Your admin request is currently pending approval from our root administrator. You will receive an email notification once your request has been reviewed.
+              </p>
+            </div>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              We typically review requests within 24-48 hours. Thank you for your patience!
+            </p>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              This is an automated notification from the Fellowship Platform.
+            </p>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  rootAdminNewRequest: (
+    adminName: string,
+    adminEmail: string,
+    institutionName: string,
+    reviewUrl: string
+  ) => ({
+    subject: `New Admin Approval Request - ${institutionName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Admin Request</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🔔 New Admin Request</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Hello Root Admin,</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              A new institution admin is requesting approval to join the Fellowship Platform.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #e5e7eb;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: 600; color: #374151;">Admin Name:</td>
+                  <td style="padding: 8px 0; color: #6b7280;">${adminName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: 600; color: #374151;">Email:</td>
+                  <td style="padding: 8px 0; color: #6b7280;">${adminEmail}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: 600; color: #374151;">Institution:</td>
+                  <td style="padding: 8px 0; color: #6b7280;">${institutionName}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${reviewUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Review Request
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              This is an automated notification from the Fellowship Platform.
+            </p>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  adminApproved: (
+    adminName: string,
+    institutionName: string,
+    dashboardUrl: string
+  ) => ({
+    subject: `🎉 Your Admin Request Has Been Approved!`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Admin Request Approved</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Request Approved!</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Dear ${adminName},</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Congratulations! Your admin request for <strong>${institutionName}</strong> has been approved.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #10b981;">
+              <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                You now have full access to your admin dashboard. You can start creating cohorts, scheduling sessions, and managing your fellowship program.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Go to Admin Dashboard
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              This is an automated notification from the Fellowship Platform.
+            </p>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  adminRejected: (adminName: string, institutionName: string) => ({
+    subject: `Update on Your Admin Request`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Admin Request Update</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">Request Update</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Dear ${adminName},</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              Thank you for your interest in managing <strong>${institutionName}</strong> on the Fellowship Platform.
+            </p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              After careful review, we are unable to approve your admin request at this time.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #6b7280;">
+              <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                If you have questions about this decision, please contact our support team.
+              </p>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              This is an automated notification from the Fellowship Platform.
             </p>
           </div>
         </body>

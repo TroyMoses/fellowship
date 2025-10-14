@@ -145,6 +145,21 @@ export const authOptions: NextAuthOptions = {
               token.id = dbUser._id.toString();
               token.role = dbUser.role || null;
               token.institutionId = dbUser.institutionId?.toString() || null;
+
+              if (dbUser.institutionId) {
+                const institutionsCollection = db.collection("institutions");
+                const institution = await institutionsCollection.findOne({
+                  _id: dbUser.institutionId,
+                });
+                token.approvalStatus = institution?.status || null;
+                console.log("[v0] JWT token created with approval status", {
+                  role: token.role,
+                  approvalStatus: token.approvalStatus,
+                });
+              } else {
+                token.approvalStatus = null;
+              }
+
               console.log("[v0] JWT token created", {
                 role: token.role,
                 hasInstitution: !!token.institutionId,
@@ -153,6 +168,7 @@ export const authOptions: NextAuthOptions = {
               token.id = user.email;
               token.role = null;
               token.institutionId = null;
+              token.approvalStatus = null;
               console.log(
                 "[v0] JWT token created with defaults (user not in DB)"
               );
@@ -161,6 +177,7 @@ export const authOptions: NextAuthOptions = {
             token.id = user.email;
             token.role = null;
             token.institutionId = null;
+            token.approvalStatus = null;
             console.log(
               "[v0] JWT token created with defaults (MongoDB unavailable)"
             );
@@ -170,6 +187,7 @@ export const authOptions: NextAuthOptions = {
           token.id = user.email;
           token.role = null;
           token.institutionId = null;
+          token.approvalStatus = null;
         }
       }
 
@@ -187,9 +205,21 @@ export const authOptions: NextAuthOptions = {
               token.id = dbUser._id.toString();
               token.role = dbUser.role || null;
               token.institutionId = dbUser.institutionId?.toString() || null;
+
+              if (dbUser.institutionId) {
+                const institutionsCollection = db.collection("institutions");
+                const institution = await institutionsCollection.findOne({
+                  _id: dbUser.institutionId,
+                });
+                token.approvalStatus = institution?.status || null;
+              } else {
+                token.approvalStatus = null;
+              }
+
               console.log("[v0] JWT token updated from database", {
                 role: token.role,
                 hasInstitution: !!token.institutionId,
+                approvalStatus: token.approvalStatus,
               });
             }
           }
@@ -205,13 +235,18 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         // @ts-expect-error - Role
         session.user.role = token.role as string | null;
-        // @ts-expect-error - Institution id
         session.user.institutionId = token.institutionId as string | null;
+        // @ts-expect-error - Approval status
+        session.user.approvalStatus = token.approvalStatus as string | null;
 
-        console.log("[v0] Session created", { role: session.user.role });
+        console.log("[v0] Session created", {
+          role: session.user.role,
+          approvalStatus: session.user.approvalStatus,
+        });
       }
       return session;
     },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async redirect({ url, baseUrl }) {
       console.log("[v0] Redirect callback", { url, baseUrl });
 

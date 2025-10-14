@@ -3,10 +3,12 @@ import type { ObjectId } from "mongodb";
 export interface Institution {
   _id?: ObjectId;
   name: string;
+  logo?: string; // Added logo field for institution branding
   googleAccountEmail: string;
   googleRefreshToken?: string;
   googleCalendarId?: string;
   googleDriveFolderId?: string;
+  status: "pending" | "approved" | "rejected"; // Added approval status
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,7 +32,7 @@ export interface User {
   email: string;
   name: string;
   image?: string;
-  role: "admin" | "fellow";
+  role: "admin" | "fellow" | "root_admin"; // Added root_admin role
   institutionId?: ObjectId;
   cohortIds: ObjectId[];
   googleAccountEmail?: string;
