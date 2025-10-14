@@ -224,7 +224,7 @@ export default async function ApplicationDetailsPage({
           <CardContent>
             <ApplicationActions
               applicationId={params.id}
-              activeCohortId={activeCohort?._id?.toString()}
+              hasActiveCohort={!!activeCohort}
             />
           </CardContent>
         </Card>

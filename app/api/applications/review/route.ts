@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { applicationId, action, notes, cohortId } = await request.json();
+    const { applicationId, action, notes } = await request.json();
 
     if (!applicationId || !action || !["approve", "reject"].includes(action)) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -54,33 +54,49 @@ export async function POST(request: Request) {
       }
     );
 
-    // If approved, update the user's institution and cohort
+    // If approved, update the user's institution and automatically assign to active cohort
     if (action === "approve") {
+      const activeCohort = await db.collection("cohorts").findOne({
+        institutionId: new ObjectId(session.user.institutionId),
+        status: "active",
+      });
+
       const updateData: any = {
         institutionId: new ObjectId(session.user.institutionId),
       };
 
-      // Add to cohort if one is provided
-      if (cohortId) {
+      if (activeCohort) {
+        // Add fellow to active cohort
         await db.collection("users").updateOne(
           { _id: application.fellowId },
           {
             $set: updateData,
-            $addToSet: { cohortIds: new ObjectId(cohortId) },
+            $addToSet: { cohortIds: activeCohort._id },
           }
         );
 
         // Add fellow to cohort's fellowIds
         await db.collection("cohorts").updateOne(
-          { _id: new ObjectId(cohortId) },
+          { _id: activeCohort._id },
           {
             $addToSet: { fellowIds: application.fellowId },
           }
         );
+
+        console.log("[v0] Fellow automatically assigned to active cohort:", {
+          fellowId: application.fellowId,
+          cohortId: activeCohort._id,
+          cohortName: activeCohort.name,
+        });
       } else {
+        // No active cohort - just assign to institution
         await db
           .collection("users")
           .updateOne({ _id: application.fellowId }, { $set: updateData });
+
+        console.log(
+          "[v0] Fellow approved but no active cohort available for assignment"
+        );
       }
     }
 
@@ -117,7 +133,6 @@ export async function POST(request: Request) {
       action,
       fellowEmail: fellow?.email,
       institutionName: institution?.name,
-      cohortId: cohortId || "none",
     });
 
     return NextResponse.json({
