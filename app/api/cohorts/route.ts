@@ -28,7 +28,6 @@ export async function POST(req: NextRequest) {
 
     const validationResult = createCohortSchema.safeParse(body);
     if (!validationResult.success) {
-      // @ts-expect-error - error
       throw new AppError(validationResult.error.errors[0].message, 400);
     }
 
@@ -46,12 +45,60 @@ export async function POST(req: NextRequest) {
       throw new AppError("End date must be after start date", 400);
     }
 
-    let status: "upcoming" | "active" | "completed" = "upcoming";
-    if (now >= startDate && now <= endDate) {
-      status = "active";
-    } else if (now > endDate) {
-      status = "completed";
+    const existingCohorts = await db
+      .collection("cohorts")
+      .find({
+        institutionId,
+        status: { $in: ["active", "upcoming"] },
+      })
+      .toArray();
+
+    // Find the active cohort if it exists
+    const activeCohort = existingCohorts.find((c) => c.status === "active");
+
+    // If there's an active cohort, new cohort must start after it ends
+    if (activeCohort) {
+      const activeCohortEndDate = new Date(activeCohort.endDate);
+      if (startDate <= activeCohortEndDate) {
+        throw new AppError(
+          `New cohort must start after the current active cohort ends (${activeCohortEndDate.toLocaleDateString()})`,
+          400
+        );
+      }
     }
+
+    // Check for overlapping date ranges with any existing cohort
+    for (const existingCohort of existingCohorts) {
+      const existingStart = new Date(existingCohort.startDate);
+      const existingEnd = new Date(existingCohort.endDate);
+
+      // Check if date ranges overlap
+      const hasOverlap =
+        (startDate >= existingStart && startDate <= existingEnd) ||
+        (endDate >= existingStart && endDate <= existingEnd) ||
+        (startDate <= existingStart && endDate >= existingEnd);
+
+      if (hasOverlap) {
+        throw new AppError(
+          `Date range overlaps with existing cohort "${
+            existingCohort.name
+          }" (${existingStart.toLocaleDateString()} - ${existingEnd.toLocaleDateString()})`,
+          400
+        );
+      }
+    }
+
+    // Determine initial status - if there's an active cohort, new cohort is always upcoming
+    let status: "upcoming" | "active" | "completed" = "upcoming";
+    if (!activeCohort) {
+      // Only set to active if no active cohort exists and dates are current
+      if (now >= startDate && now <= endDate) {
+        status = "active";
+      } else if (now > endDate) {
+        status = "completed";
+      }
+    }
+    // If there's an active cohort, status remains "upcoming" regardless of dates
 
     // Create cohort
     const cohort = {

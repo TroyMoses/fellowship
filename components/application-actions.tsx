@@ -21,12 +21,12 @@ import {
 
 interface ApplicationActionsProps {
   applicationId: string;
-  activeCohortId?: string;
+  hasActiveCohort?: boolean;
 }
 
 export function ApplicationActions({
   applicationId,
-  activeCohortId,
+  hasActiveCohort,
 }: ApplicationActionsProps) {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -43,7 +43,6 @@ export function ApplicationActions({
           applicationId,
           action,
           notes,
-          cohortId: activeCohortId,
         }),
       });
 
@@ -84,10 +83,16 @@ export function ApplicationActions({
         />
       </div>
 
-      {!activeCohortId && (
+      {!hasActiveCohort && (
         <div className="p-3 rounded-lg bg-muted text-sm text-muted-foreground">
           Note: There is no active cohort. Approved fellows will be added to the
-          institution but not assigned to a cohort.
+          institution and automatically assigned when a cohort becomes active.
+        </div>
+      )}
+
+      {hasActiveCohort && (
+        <div className="p-3 rounded-lg bg-primary/10 text-sm text-primary">
+          Approved fellows will be automatically assigned to the active cohort.
         </div>
       )}
 
@@ -143,8 +148,9 @@ export function ApplicationActions({
               <AlertDialogDescription>
                 Are you sure you want to approve this application? The applicant
                 will be added to your fellowship
-                {activeCohortId ? " and the active cohort" : ""} and notified
-                via email.
+                {hasActiveCohort &&
+                  " and automatically assigned to the active cohort"}
+                . They will be notified via email.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
