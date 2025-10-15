@@ -96,3 +96,21 @@ export interface Application {
   reviewedBy?: ObjectId;
   reviewNotes?: string;
 }
+
+export interface Message {
+  _id?: ObjectId;
+  conversationId: ObjectId;
+  senderId: ObjectId;
+  content: string;
+  readBy: ObjectId[];
+  createdAt: Date;
+}
+
+export interface Conversation {
+  _id?: ObjectId;
+  type: "group" | "direct";
+  cohortId?: ObjectId; // For group chats
+  participantIds: ObjectId[];
+  lastMessageAt: Date;
+  createdAt: Date;
+}
