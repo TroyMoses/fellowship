@@ -21,7 +21,13 @@ export async function POST(
     }
 
     const db = await getDatabase();
-    const institutionId = new ObjectId(session.user.institutionId);
+    const institutionId = session?.user?.institutionId
+      ? new ObjectId(session.user.institutionId)
+      : null;
+
+    if (!institutionId) {
+      throw new AppError("Institution ID is missing from session", 400);
+    }
 
     const cohort = await db.collection("cohorts").findOne({
       _id: new ObjectId(id),

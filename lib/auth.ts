@@ -195,7 +195,7 @@ export const authOptions: NextAuthOptions = {
                 hasInstitution: !!token.institutionId,
               });
             } else {
-              token.id = user.email;
+              token.id = user.email ?? "";
               token.role = null;
               token.institutionId = null;
               token.approvalStatus = null;
@@ -204,7 +204,7 @@ export const authOptions: NextAuthOptions = {
               );
             }
           } else {
-            token.id = user.email;
+            token.id = user.email ?? "";
             token.role = null;
             token.institutionId = null;
             token.approvalStatus = null;
@@ -214,7 +214,7 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           console.error("[v0] Error fetching user in JWT callback:", error);
-          token.id = user.email;
+          token.id = user.email ?? "";
           token.role = null;
           token.institutionId = null;
           token.approvalStatus = null;

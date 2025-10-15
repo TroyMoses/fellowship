@@ -57,12 +57,28 @@ export default async function InstitutionsListPage({
     .toArray();
 
   // Get admin info for each institution
-  const institutionsWithAdmins = await Promise.all(
+  type AdminUser = {
+    name?: string;
+    email?: string;
+    [key: string]: any;
+  };
+
+  type InstitutionWithAdmin = {
+    _id: (typeof institutions)[0]["_id"];
+    name: string;
+    logo?: string;
+    status: string;
+    createdAt: Date | string;
+    admin: AdminUser | null;
+    [key: string]: any;
+  };
+
+  const institutionsWithAdmins: InstitutionWithAdmin[] = await Promise.all(
     institutions.map(async (inst) => {
       const admin = await db.collection("users").findOne({
         institutionId: inst._id,
       });
-      return { ...inst, admin };
+      return { ...inst, admin } as InstitutionWithAdmin;
     })
   );
 

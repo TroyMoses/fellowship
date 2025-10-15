@@ -482,4 +482,173 @@ export const emailTemplates = {
       </html>
     `,
   }),
+
+  sessionUpdated: (
+    fellowName: string,
+    sessionTitle: string,
+    oldDateTime: string,
+    newDateTime: string,
+    meetLink: string,
+    changes: string[]
+  ) => ({
+    subject: `Session Updated: ${sessionTitle}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Session Updated</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">📅 Session Updated</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Dear ${fellowName},</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              The session <strong>${sessionTitle}</strong> has been updated.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #f59e0b;">
+              <h3 style="margin-top: 0; color: #374151;">What Changed:</h3>
+              <ul style="margin: 10px 0; padding-left: 20px; color: #6b7280;">
+                ${changes.map((change) => `<li>${change}</li>`).join("")}
+              </ul>
+            </div>
+            
+            ${
+              oldDateTime !== newDateTime
+                ? `
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #e5e7eb;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: 600; color: #374151;">Previous Time:</td>
+                  <td style="padding: 8px 0; color: #6b7280; text-decoration: line-through;">${oldDateTime}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: 600; color: #374151;">New Time:</td>
+                  <td style="padding: 8px 0; color: #10b981; font-weight: 600;">${newDateTime}</td>
+                </tr>
+              </table>
+            </div>
+            `
+                : ""
+            }
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${meetLink}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                View Session Details
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              This is an automated notification from the Fellowship Platform.
+            </p>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  sessionCancelled: (
+    fellowName: string,
+    sessionTitle: string,
+    sessionDateTime: string,
+    reason: string
+  ) => ({
+    subject: `Session Cancelled: ${sessionTitle}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Session Cancelled</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">❌ Session Cancelled</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Dear ${fellowName},</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              We regret to inform you that the session <strong>${sessionTitle}</strong> scheduled for <strong>${sessionDateTime}</strong> has been cancelled.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #ef4444;">
+              <h3 style="margin-top: 0; color: #374151;">Reason for Cancellation:</h3>
+              <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                ${reason}
+              </p>
+            </div>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              We apologize for any inconvenience this may cause. Please check your dashboard for upcoming sessions.
+            </p>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              This is an automated notification from the Fellowship Platform.
+            </p>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  contentUploaded: (
+    fellowName: string,
+    contentTitle: string,
+    cohortName: string,
+    contentLink: string,
+    description: string
+  ) => ({
+    subject: `New Content Available: ${contentTitle}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Content Available</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">📚 New Content Available</h1>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e7eb;">
+            <p style="font-size: 16px; margin-bottom: 20px;">Dear ${fellowName},</p>
+            
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              New content has been uploaded to <strong>${cohortName}</strong>.
+            </p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #e5e7eb;">
+              <h3 style="margin-top: 0; color: #374151;">${contentTitle}</h3>
+              ${
+                description
+                  ? `<p style="margin: 10px 0 0 0; font-size: 14px; color: #6b7280;">${description}</p>`
+                  : ""
+              }
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${contentLink}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                View Content
+              </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              This is an automated notification from the Fellowship Platform.
+            </p>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
 };

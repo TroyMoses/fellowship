@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { ObjectId } from "mongodb";
 import { notFound } from "next/navigation";
+import { EditSessionDialog } from "@/components/admin/edit-session-dialog";
+import { CancelSessionDialog } from "@/components/admin/cancel-session-dialog";
 
 export default async function SessionDetailPage({
   params,
@@ -34,7 +36,7 @@ export default async function SessionDetailPage({
 
   const sessionData = await db.collection("sessions").findOne({
     _id: new ObjectId(id),
-    institutionId: new ObjectId(session?.user?.institutionId),
+    institutionId: new ObjectId(session?.user?.institutionId ?? undefined),
   });
 
   if (!sessionData) {
@@ -54,6 +56,7 @@ export default async function SessionDetailPage({
     .toArray();
 
   const isPast = new Date(sessionData.startTime) < new Date();
+  const isCancelled = sessionData.status === "cancelled";
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -71,11 +74,56 @@ export default async function SessionDetailPage({
             </h2>
             <p className="text-muted-foreground">{cohort?.name}</p>
           </div>
-          <Badge variant={isPast ? "outline" : "default"}>
-            {isPast ? "Completed" : "Upcoming"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {isCancelled ? (
+              <Badge variant="destructive">Cancelled</Badge>
+            ) : (
+              <Badge variant={isPast ? "outline" : "default"}>
+                {isPast ? "Completed" : "Upcoming"}
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
+
+      {isCancelled && sessionData.cancellationReason && (
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">
+              Session Cancelled
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              <strong>Reason:</strong> {sessionData.cancellationReason}
+            </p>
+            {sessionData.cancelledAt && (
+              <p className="text-sm text-muted-foreground mt-2">
+                <strong>Cancelled on:</strong>{" "}
+                {new Date(sessionData.cancelledAt).toLocaleString()}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {!isPast && !isCancelled && (
+        <div className="flex gap-3">
+          <EditSessionDialog
+            sessionId={id}
+            currentData={{
+              title: sessionData.title,
+              description: sessionData.description || "",
+              startTime: sessionData.startTime,
+              endTime: sessionData.endTime,
+            }}
+          />
+          <CancelSessionDialog
+            sessionId={id}
+            sessionTitle={sessionData.title}
+          />
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
@@ -114,7 +162,7 @@ export default async function SessionDetailPage({
               </div>
             </div>
 
-            {sessionData.googleMeetLink && (
+            {sessionData.googleMeetLink && !isCancelled && (
               <div className="flex items-start gap-3">
                 <Video className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1">

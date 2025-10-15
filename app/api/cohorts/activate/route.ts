@@ -122,7 +122,9 @@ export async function GET(req: NextRequest) {
 
     const db = await getDatabase();
     const now = new Date();
-    const institutionId = new ObjectId(session.user.institutionId);
+    const institutionId = session.user.institutionId
+      ? new ObjectId(session.user.institutionId)
+      : undefined;
 
     // Get all cohorts for this institution
     const cohorts = await db

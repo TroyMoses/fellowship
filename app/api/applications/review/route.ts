@@ -24,7 +24,9 @@ export async function POST(request: Request) {
     // Get the application
     const application = await db.collection("applications").findOne({
       _id: new ObjectId(applicationId),
-      institutionId: new ObjectId(session.user.institutionId),
+      institutionId: session.user.institutionId
+        ? new ObjectId(session.user.institutionId)
+        : undefined,
     });
 
     if (!application) {
@@ -57,12 +59,16 @@ export async function POST(request: Request) {
     // If approved, update the user's institution and automatically assign to active cohort
     if (action === "approve") {
       const activeCohort = await db.collection("cohorts").findOne({
-        institutionId: new ObjectId(session.user.institutionId),
+        institutionId: session.user.institutionId
+          ? new ObjectId(session.user.institutionId)
+          : undefined,
         status: "active",
       });
 
       const updateData: any = {
-        institutionId: new ObjectId(session.user.institutionId),
+        institutionId: session.user.institutionId
+          ? new ObjectId(session.user.institutionId)
+          : undefined,
       };
 
       if (activeCohort) {
@@ -104,9 +110,11 @@ export async function POST(request: Request) {
     const fellow = await db
       .collection("users")
       .findOne({ _id: application.fellowId });
-    const institution = await db
-      .collection("institutions")
-      .findOne({ _id: new ObjectId(session.user.institutionId) });
+    const institution = session.user.institutionId
+      ? await db
+          .collection("institutions")
+          .findOne({ _id: new ObjectId(session.user.institutionId) })
+      : null;
 
     if (fellow?.email && institution) {
       const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";

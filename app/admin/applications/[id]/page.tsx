@@ -41,9 +41,13 @@ export default async function ApplicationDetailsPage({
     notFound();
   }
 
+  if (!session?.user?.institutionId) {
+    notFound();
+  }
+
   const application = await db.collection("applications").findOne({
     _id: applicationId,
-    institutionId: new ObjectId(session?.user?.institutionId),
+    institutionId: new ObjectId(session.user.institutionId),
   });
 
   if (!application) {
