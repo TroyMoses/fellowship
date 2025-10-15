@@ -57,8 +57,19 @@ export default async function AllAdminsPage() {
     institutions.map((inst) => [inst._id.toString(), inst])
   );
 
+  // Define the expected admin type for clarity
+  type AdminWithInstitution = {
+    _id: any; // You can replace 'any' with the actual type, e.g., ObjectId, if available
+    name?: string;
+    email?: string;
+    image?: string;
+    createdAt?: string | Date;
+    institutionId?: string;
+    institution?: (typeof institutions)[0] | null;
+  };
+
   // Combine admin data with institution info
-  const adminsWithInstitutions = admins.map((admin) => {
+  const adminsWithInstitutions: AdminWithInstitution[] = admins.map((admin) => {
     const institution = admin.institutionId
       ? institutionMap.get(admin.institutionId.toString())
       : null;
@@ -189,7 +200,7 @@ export default async function AllAdminsPage() {
                         )}
                         <p className="text-xs text-muted-foreground mt-2">
                           Joined:{" "}
-                          {new Date(admin.createdAt).toLocaleDateString()}
+                          {new Date(admin.createdAt ?? "").toLocaleDateString()}
                         </p>
                       </div>
                     </div>

@@ -12,6 +12,7 @@ import { Calendar, FolderOpen, Users, Video } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ObjectId } from "mongodb";
+import { ShareApplicationLink } from "@/components/admin/share-application-link";
 
 export default async function AdminDashboardPage() {
   const session = await getServerSession(authOptions);
@@ -19,6 +20,10 @@ export default async function AdminDashboardPage() {
 
   const institutionObjectId = session?.user?.institutionId
     ? new ObjectId(session.user.institutionId)
+    : null;
+
+  const institution = institutionObjectId
+    ? await db.collection("institutions").findOne({ _id: institutionObjectId })
     : null;
 
   // Get stats
@@ -49,6 +54,13 @@ export default async function AdminDashboardPage() {
           Here&apos;s what&apos;s happening with your fellowship programs
         </p>
       </div>
+
+      {institution && (
+        <ShareApplicationLink
+          institutionId={institution._id.toString()}
+          institutionName={institution.name}
+        />
+      )}
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

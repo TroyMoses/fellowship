@@ -11,6 +11,21 @@ export interface CreateEventParams {
   attendeeEmails: string[];
 }
 
+export interface UpdateEventParams {
+  institutionId: string | ObjectId;
+  eventId: string;
+  title?: string;
+  description?: string;
+  startTime?: Date;
+  endTime?: Date;
+  attendeeEmails?: string[];
+}
+
+export interface DeleteEventParams {
+  institutionId: string | ObjectId;
+  eventId: string;
+}
+
 export interface CalendarEvent {
   id: string;
   meetLink?: string;
@@ -100,10 +115,18 @@ export async function createCalendarEvent(
  * Update a Google Calendar event
  */
 export async function updateCalendarEvent(
-  institutionId: string | ObjectId,
-  eventId: string,
-  updates: Partial<CreateEventParams>
+  params: UpdateEventParams
 ): Promise<void> {
+  const {
+    institutionId,
+    eventId,
+    title,
+    description,
+    startTime,
+    endTime,
+    attendeeEmails,
+  } = params;
+
   try {
     const oauth2Client = await getGoogleClient(institutionId);
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
@@ -111,22 +134,22 @@ export async function updateCalendarEvent(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const event: any = {};
 
-    if (updates.title) event.summary = updates.title;
-    if (updates.description) event.description = updates.description;
-    if (updates.startTime) {
+    if (title) event.summary = title;
+    if (description !== undefined) event.description = description;
+    if (startTime) {
       event.start = {
-        dateTime: updates.startTime.toISOString(),
+        dateTime: startTime.toISOString(),
         timeZone: "UTC",
       };
     }
-    if (updates.endTime) {
+    if (endTime) {
       event.end = {
-        dateTime: updates.endTime.toISOString(),
+        dateTime: endTime.toISOString(),
         timeZone: "UTC",
       };
     }
-    if (updates.attendeeEmails) {
-      event.attendees = updates.attendeeEmails.map((email) => ({ email }));
+    if (attendeeEmails) {
+      event.attendees = attendeeEmails.map((email) => ({ email }));
     }
 
     await calendar.events.patch({
@@ -150,9 +173,10 @@ export async function updateCalendarEvent(
  * Delete a Google Calendar event
  */
 export async function deleteCalendarEvent(
-  institutionId: string | ObjectId,
-  eventId: string
+  params: DeleteEventParams
 ): Promise<void> {
+  const { institutionId, eventId } = params;
+
   try {
     const oauth2Client = await getGoogleClient(institutionId);
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });

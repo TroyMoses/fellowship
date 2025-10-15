@@ -34,7 +34,9 @@ export async function POST(req: NextRequest) {
     const data = validationResult.data;
 
     const db = await getDatabase();
-    const institutionId = new ObjectId(session.user.institutionId);
+    const institutionId = session.user.institutionId
+      ? new ObjectId(session.user.institutionId)
+      : undefined;
 
     // Determine cohort status based on dates
     const now = new Date();
@@ -129,7 +131,7 @@ export async function POST(req: NextRequest) {
         if (!rootFolderId) {
           console.log("[v0] Creating institution root folder...");
           const rootFolder = await createDriveFolder({
-            institutionId: institutionId.toString(),
+            institutionId: institutionId ? institutionId.toString() : "",
             folderName: `${institution.name} - Fellowship Program`,
           });
 
@@ -152,7 +154,7 @@ export async function POST(req: NextRequest) {
 
         // Create cohort folder
         const folder = await createDriveFolder({
-          institutionId: institutionId.toString(),
+          institutionId: institutionId ? institutionId.toString() : "",
           folderName: data.name,
           parentFolderId: rootFolderId,
         });
@@ -196,7 +198,9 @@ export async function GET(req: NextRequest) {
     const cohorts = await db
       .collection("cohorts")
       .find({
-        institutionId: new ObjectId(session.user.institutionId),
+        institutionId: session.user.institutionId
+          ? new ObjectId(session.user.institutionId)
+          : undefined,
       })
       .sort({ createdAt: -1 })
       .toArray();

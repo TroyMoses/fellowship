@@ -55,6 +55,10 @@ export interface Session {
     status: "invited" | "attended" | "missed";
   }[];
   contentLinks: string[];
+  status?: "scheduled" | "cancelled" | "completed";
+  cancellationReason?: string;
+  cancelledAt?: Date;
+  cancelledBy?: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
